@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+
+# Virtual environments
+.venv/
+env/
+venv/
+
+# PyInstaller output
+/dist/
+/build/
+
+# Testing & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Personal / local docs
+STORE_SUBMISSION.md
+
+# OS artefacts
+.DS_Store
+Thumbs.db
+desktop.ini

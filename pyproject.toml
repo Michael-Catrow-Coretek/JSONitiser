@@ -1,0 +1,15 @@
+[project]
+name = "jsonitizer"
+version = "0.1.0"
+description = "Sanitize PII from Elastic JSON logs before submitting to LLMs"
+requires-python = ">=3.10"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pyinstaller>=6.0",
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
