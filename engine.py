@@ -14,6 +14,7 @@ import re
 
 USER_KEYS: frozenset[str] = frozenset(
     {
+        # Standard ECS user fields
         "user.name",
         "username",
         "employee_id",
@@ -25,6 +26,17 @@ USER_KEYS: frozenset[str] = frozenset(
         "winlog.user.name",
         "source.user.name",
         "destination.user.name",
+        # Kibana analyst / workflow identity fields
+        "kibana.alert.rule.created_by",
+        "kibana.alert.rule.updated_by",
+        "kibana.alert.workflow_user",
+        "kibana.alert.workflow_assignee_ids",
+        # M365 Defender process account fields
+        "m365_defender.event.initiating_process.account_name",
+        "m365_defender.event.initiating_process.account_sid",
+        "m365_defender.event.initiating_process.logon_id",
+        # ECS aggregated related-user list
+        "related.user",
     }
 )
 
@@ -38,8 +50,17 @@ EMAIL_KEYS: frozenset[str] = frozenset(
 
 HOST_KEYS: frozenset[str] = frozenset(
     {
+        # ECS host identity
         "host.name",
         "host.hostname",
+        "host.id",
+        # Elastic agent endpoint identity
+        "agent.name",
+        "agent.id",
+        "agent.ephemeral_id",
+        "elastic_agent.id",
+        # ECS aggregated related-host list
+        "related.hosts",
     }
 )
 
@@ -47,6 +68,25 @@ ORG_KEYS: frozenset[str] = frozenset(
     {
         "organization.name",
         "org.name",
+        # Active Directory / M365 domain and tenant
+        "user.domain",
+        "m365_defender.event.tenant.name",
+        "m365_defender.event.tenant.id",
+        "m365_defender.event.machine_group",
+        "m365_defender.event.initiating_process.account_domain",
+        # Azure infrastructure identifiers
+        "azure.eventhub",
+        "azure.consumer_group",
+        # Data stream namespace (org-specific index namespace)
+        "data_stream.namespace",
+        "kibana.alert.original_data_stream.namespace",
+    }
+)
+
+URL_KEYS: frozenset[str] = frozenset(
+    {
+        "kibana.alert.url",
+        "kibana.alert.rule.meta.kibana_siem_app_url",
     }
 )
 
@@ -63,6 +103,27 @@ _EMAIL_RE = re.compile(
 _HOSTNAME_RE = re.compile(
     r"\b((?:WS|LAPTOP|DESKTOP|PC)-[A-Z0-9]{3,})\b",
     re.IGNORECASE,
+)
+
+# Windows user profile path — captures username segment from C:\Users\<username>\...
+_WINPATH_RE = re.compile(
+    r"(?i)(C:\\Users\\)([^\\\/\s\"'<>]{2,})"
+)
+
+# Windows Security Identifier — uniquely encodes domain SID + user account RID
+_SID_RE = re.compile(
+    r"\bS-1-[0-9]-(?:\d+-)*\d+\b"
+)
+
+# NetBIOS DOMAIN\username — e.g. CORP\jdoe
+# Negative lookahead (?!\\) prevents matching registry/path continuations like CORP\Users\jdoe
+_DOMAIN_USER_RE = re.compile(
+    r"\b([A-Z][A-Z0-9]{1,14})\\([A-Za-z][A-Za-z0-9._\-]{1,})\b(?!\\)"
+)
+
+# Domain/account prefixes that belong to Windows built-ins and must NOT be redacted
+_SYSTEM_PREFIXES: frozenset[str] = frozenset(
+    {"HKLM", "HKCU", "HKCR", "HKCC", "HKU", "NT", "BUILTIN", "AUTHORITY", "SERVICE"}
 )
 
 # Keys whose values are IP addresses and must not be sanitised
@@ -87,6 +148,7 @@ class JSONitizerEngine:
             "EMAIL": 0,
             "HOST": 0,
             "ORG": 0,
+            "URL": 0,
         }
 
     # ------------------------------------------------------------------
@@ -109,10 +171,11 @@ class JSONitizerEngine:
         return self.mapping[value]
 
     def _apply_regex(self, text: str) -> str:
-        """Scan an unstructured string and replace emails / AD hostnames.
+        """Scan an unstructured string and replace all identifying patterns.
 
-        IP addresses are structurally distinct from both pattern types and
-        will never be touched.
+        Handles: email addresses, AD workstation hostnames, Windows user
+        profile paths, Windows SIDs, and DOMAIN\\username patterns.
+        IP addresses are structurally distinct and will never be touched.
         """
 
         def _sub_email(m: re.Match) -> str:
@@ -122,8 +185,23 @@ class JSONitizerEngine:
             # Normalise to upper-case so 'WS-12345' and 'ws-12345' share a slot.
             return self._get_replacement(m.group(0).upper(), "HOST")
 
+        def _sub_winpath(m: re.Match) -> str:
+            # Keep the "C:\\Users\\" prefix; replace only the username segment.
+            return m.group(1) + self._get_replacement(m.group(2), "USER")
+
+        def _sub_sid(m: re.Match) -> str:
+            return self._get_replacement(m.group(0), "USER")
+
+        def _sub_domain_user(m: re.Match) -> str:
+            if m.group(1) in _SYSTEM_PREFIXES:
+                return m.group(0)  # Preserve system/registry paths unchanged.
+            return self._get_replacement(m.group(0), "USER")
+
         text = _EMAIL_RE.sub(_sub_email, text)
         text = _HOSTNAME_RE.sub(_sub_host, text)
+        text = _WINPATH_RE.sub(_sub_winpath, text)
+        text = _SID_RE.sub(_sub_sid, text)
+        text = _DOMAIN_USER_RE.sub(_sub_domain_user, text)
         return text
 
     @staticmethod
@@ -183,8 +261,10 @@ class JSONitizerEngine:
                 return self._get_replacement(data, "HOST")
             if self._key_matches(current_key, ORG_KEYS):
                 return self._get_replacement(data, "ORG")
+            if self._key_matches(current_key, URL_KEYS):
+                return self._get_replacement(data, "URL")
 
-            # Unstructured text — apply regex for emails / AD hostnames.
+            # Unstructured text — apply regex for emails, hostnames, paths, SIDs.
             return self._apply_regex(data)
 
         # int, float, bool, None — untouched.

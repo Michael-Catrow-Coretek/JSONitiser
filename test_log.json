@@ -1,0 +1,141 @@
+{
+  "_index": ".internal.alerts-security.alerts-default-000001",
+  "_id": "abc123def456abc123def456abc123def456abc1",
+  "_source": {
+    "@timestamp": "2026-05-22T09:14:33.000Z",
+    "event": {
+      "action": "process_creation",
+      "category": "process",
+      "kind": "signal",
+      "outcome": "success",
+      "risk_score": 87.5
+    },
+    "user": {
+      "name": "jdoe",
+      "domain": "ACMECORP",
+      "email": "jdoe@acmecorp.com",
+      "id": "S-1-5-21-111122223-444455556-777788889-1104"
+    },
+    "host": {
+      "name": "LAPTOP-4A2B3C",
+      "hostname": "LAPTOP-4A2B3C",
+      "id": "f7e6d5c4-b3a2-9180-7f6e-5d4c3b2a1908",
+      "os": {
+        "name": "Windows 11 Pro",
+        "version": "23H2"
+      },
+      "ip": ["10.10.5.42", "fe80::1a2b:3c4d:5e6f:7890"]
+    },
+    "agent": {
+      "name": "LAPTOP-4A2B3C",
+      "id": "ea11bb22-cc33-dd44-ee55-ff6677889900",
+      "ephemeral_id": "eph-00112233-4455-6677-8899-aabbccddeeff",
+      "version": "8.13.0",
+      "type": "endpoint"
+    },
+    "elastic_agent": {
+      "id": "ea11bb22-cc33-dd44-ee55-ff6677889900"
+    },
+    "source": {
+      "ip": "10.10.5.42",
+      "port": 49512
+    },
+    "destination": {
+      "ip": "185.220.101.47",
+      "port": 443,
+      "geo": {
+        "country_name": "Netherlands",
+        "city_name": "Amsterdam"
+      }
+    },
+    "process": {
+      "name": "powershell.exe",
+      "pid": 9412,
+      "executable": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "command_line": "powershell.exe -NonInteractive -NoProfile -ExecutionPolicy Bypass -File C:\\Users\\jdoe\\AppData\\Local\\Temp\\update_tool.ps1",
+      "hash": {
+        "sha256": "a3f1e2d4c5b6a7f8e9d0c1b2a3f4e5d6c7b8a9f0e1d2c3b4a5f6e7d8c9b0a1f2",
+        "md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      "parent": {
+        "name": "explorer.exe",
+        "pid": 3204,
+        "command_line": "explorer.exe /separate,C:\\Users\\jdoe\\Desktop"
+      }
+    },
+    "winlog": {
+      "event_id": 4688,
+      "channel": "Security",
+      "user": {
+        "name": "jdoe",
+        "domain": "ACMECORP",
+        "identifier": "S-1-5-21-111122223-444455556-777788889-1104",
+        "type": "User"
+      },
+      "computer_name": "LAPTOP-4A2B3C.acmecorp.local"
+    },
+    "related": {
+      "user": ["jdoe", "svc_backup"],
+      "hosts": ["LAPTOP-4A2B3C", "DC01.acmecorp.local"],
+      "ip": ["10.10.5.42", "185.220.101.47"]
+    },
+    "organization": {
+      "name": "Acme Corporation"
+    },
+    "data_stream": {
+      "namespace": "acmecorp-prod",
+      "dataset": "endpoint.alerts",
+      "type": "logs"
+    },
+    "m365_defender": {
+      "event": {
+        "tenant": {
+          "name": "AcmeCorp",
+          "id": "11223344-5566-7788-9900-aabbccddeeff"
+        },
+        "machine_group": "Workstations-EU-London",
+        "initiating_process": {
+          "account_name": "jdoe",
+          "account_domain": "ACMECORP",
+          "account_sid": "S-1-5-21-111122223-444455556-777788889-1104",
+          "logon_id": "0x3e4f5a"
+        }
+      }
+    },
+    "azure": {
+      "eventhub": "acmecorp-security-hub",
+      "consumer_group": "acmecorp-soc-consumers"
+    },
+    "kibana": {
+      "alert": {
+        "workflow_user": "analyst.smith",
+        "workflow_assignee_ids": ["uid-analyst-001", "uid-analyst-002"],
+        "original_data_stream": {
+          "namespace": "acmecorp-prod"
+        },
+        "url": "https://kibana.acmecorp.internal/app/security/alerts/detail/abc123def456abc123def456abc123def456abc1",
+        "rule": {
+          "name": "Suspicious PowerShell Execution from User Profile",
+          "description": "Detects PowerShell launched from a user temp directory",
+          "risk_score": 87,
+          "severity": "high",
+          "created_by": "rule_author",
+          "updated_by": "rule_editor",
+          "version": 7,
+          "meta": {
+            "kibana_siem_app_url": "https://kibana.acmecorp.internal/app/security"
+          }
+        }
+      }
+    },
+    "message": "Suspicious process created by ACMECORP\\jdoe on LAPTOP-4A2B3C. Parent SID S-1-5-21-111122223-444455556-777788889-1104. Contact jdoe@acmecorp.com if false positive.",
+    "tags": ["endpoint", "process_creation", "powershell"],
+    "signal": {
+      "rule": {
+        "name": "Suspicious PowerShell Execution from User Profile"
+      },
+      "original_time": "2026-05-22T09:14:33.000Z",
+      "status": "open"
+    }
+  }
+}

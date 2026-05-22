@@ -257,5 +257,254 @@ class TestEdgeCases(unittest.TestCase):
         self.assertEqual(out["host"]["name"], "<HOST_1>")
 
 
+# ---------------------------------------------------------------------------
+# M365 Defender fields
+# ---------------------------------------------------------------------------
+
+class TestM365Fields(unittest.TestCase):
+    def setUp(self):
+        self.e = JSONitizerEngine()
+
+    def test_initiating_process_account_name(self):
+        out = self.e.sanitize(
+            {"m365_defender": {"event": {"initiating_process": {"account_name": "jdoe"}}}}
+        )
+        self.assertEqual(
+            out["m365_defender"]["event"]["initiating_process"]["account_name"], "<USER_1>"
+        )
+
+    def test_initiating_process_account_sid(self):
+        sid = "S-1-5-21-1234567890-1234567890-1234567890-1001"
+        out = self.e.sanitize(
+            {"m365_defender": {"event": {"initiating_process": {"account_sid": sid}}}}
+        )
+        self.assertEqual(
+            out["m365_defender"]["event"]["initiating_process"]["account_sid"], "<USER_1>"
+        )
+
+    def test_initiating_process_logon_id(self):
+        out = self.e.sanitize(
+            {"m365_defender": {"event": {"initiating_process": {"logon_id": "0x3e7"}}}}
+        )
+        self.assertEqual(
+            out["m365_defender"]["event"]["initiating_process"]["logon_id"], "<USER_1>"
+        )
+
+    def test_tenant_name(self):
+        out = self.e.sanitize(
+            {"m365_defender": {"event": {"tenant": {"name": "AcmeCorp"}}}}
+        )
+        self.assertEqual(out["m365_defender"]["event"]["tenant"]["name"], "<ORG_1>")
+
+    def test_tenant_id(self):
+        out = self.e.sanitize(
+            {"m365_defender": {"event": {"tenant": {"id": "abc123-guid"}}}}
+        )
+        self.assertEqual(out["m365_defender"]["event"]["tenant"]["id"], "<ORG_1>")
+
+    def test_machine_group(self):
+        out = self.e.sanitize(
+            {"m365_defender": {"event": {"machine_group": "Workstations-UK"}}}
+        )
+        self.assertEqual(out["m365_defender"]["event"]["machine_group"], "<ORG_1>")
+
+    def test_account_domain(self):
+        out = self.e.sanitize(
+            {"m365_defender": {"event": {"initiating_process": {"account_domain": "CORP"}}}}
+        )
+        self.assertEqual(
+            out["m365_defender"]["event"]["initiating_process"]["account_domain"], "<ORG_1>"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Kibana workflow / analyst identity fields
+# ---------------------------------------------------------------------------
+
+class TestKibanaWorkflowFields(unittest.TestCase):
+    def setUp(self):
+        self.e = JSONitizerEngine()
+
+    def test_workflow_user(self):
+        out = self.e.sanitize(
+            {"kibana": {"alert": {"workflow_user": "analyst@soc.corp"}}}
+        )
+        self.assertEqual(out["kibana"]["alert"]["workflow_user"], "<USER_1>")
+
+    def test_rule_created_by(self):
+        out = self.e.sanitize(
+            {"kibana": {"alert": {"rule": {"created_by": "rule_author"}}}}
+        )
+        self.assertEqual(out["kibana"]["alert"]["rule"]["created_by"], "<USER_1>")
+
+    def test_rule_updated_by(self):
+        out = self.e.sanitize(
+            {"kibana": {"alert": {"rule": {"updated_by": "rule_editor"}}}}
+        )
+        self.assertEqual(out["kibana"]["alert"]["rule"]["updated_by"], "<USER_1>")
+
+    def test_workflow_assignee_ids_list(self):
+        out = self.e.sanitize(
+            {"kibana": {"alert": {"workflow_assignee_ids": ["id_abc", "id_def"]}}}
+        )
+        ids = out["kibana"]["alert"]["workflow_assignee_ids"]
+        self.assertEqual(ids[0], "<USER_1>")
+        self.assertEqual(ids[1], "<USER_2>")
+
+    def test_alert_url(self):
+        url = "https://kibana.corp.internal/app/security/alerts/abc123"
+        out = self.e.sanitize({"kibana": {"alert": {"url": url}}})
+        self.assertEqual(out["kibana"]["alert"]["url"], "<URL_1>")
+
+    def test_rule_meta_url(self):
+        url = "https://kibana.corp.internal/siem"
+        out = self.e.sanitize(
+            {"kibana": {"alert": {"rule": {"meta": {"kibana_siem_app_url": url}}}}}
+        )
+        self.assertEqual(
+            out["kibana"]["alert"]["rule"]["meta"]["kibana_siem_app_url"], "<URL_1>"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Agent and extended host fields
+# ---------------------------------------------------------------------------
+
+class TestAgentHostFields(unittest.TestCase):
+    def setUp(self):
+        self.e = JSONitizerEngine()
+
+    def test_agent_name(self):
+        out = self.e.sanitize({"agent": {"name": "LAPTOP-4A2B3C"}})
+        self.assertEqual(out["agent"]["name"], "<HOST_1>")
+
+    def test_agent_id(self):
+        out = self.e.sanitize({"agent": {"id": "a1b2c3d4-dead-beef-cafe-000000000001"}})
+        self.assertEqual(out["agent"]["id"], "<HOST_1>")
+
+    def test_agent_ephemeral_id(self):
+        out = self.e.sanitize({"agent": {"ephemeral_id": "eph-xyz-123"}})
+        self.assertEqual(out["agent"]["ephemeral_id"], "<HOST_1>")
+
+    def test_elastic_agent_id(self):
+        out = self.e.sanitize({"elastic_agent": {"id": "ea-guid-0001"}})
+        self.assertEqual(out["elastic_agent"]["id"], "<HOST_1>")
+
+    def test_host_id(self):
+        out = self.e.sanitize({"host": {"id": "machine-guid-9999"}})
+        self.assertEqual(out["host"]["id"], "<HOST_1>")
+
+    def test_related_hosts_list(self):
+        out = self.e.sanitize({"related": {"hosts": ["dc01.corp", "ws-100"]}})
+        self.assertEqual(out["related"]["hosts"][0], "<HOST_1>")
+        self.assertEqual(out["related"]["hosts"][1], "<HOST_2>")
+
+    def test_related_user_list(self):
+        out = self.e.sanitize({"related": {"user": ["alice", "bob"]}})
+        self.assertEqual(out["related"]["user"][0], "<USER_1>")
+        self.assertEqual(out["related"]["user"][1], "<USER_2>")
+
+
+# ---------------------------------------------------------------------------
+# Org, Azure, and data stream fields
+# ---------------------------------------------------------------------------
+
+class TestOrgAndAzureFields(unittest.TestCase):
+    def setUp(self):
+        self.e = JSONitizerEngine()
+
+    def test_user_domain(self):
+        out = self.e.sanitize({"user": {"domain": "CORP"}})
+        self.assertEqual(out["user"]["domain"], "<ORG_1>")
+
+    def test_azure_eventhub(self):
+        out = self.e.sanitize({"azure": {"eventhub": "acme-security-hub"}})
+        self.assertEqual(out["azure"]["eventhub"], "<ORG_1>")
+
+    def test_azure_consumer_group(self):
+        out = self.e.sanitize({"azure": {"consumer_group": "acme-soc-group"}})
+        self.assertEqual(out["azure"]["consumer_group"], "<ORG_1>")
+
+    def test_data_stream_namespace(self):
+        out = self.e.sanitize({"data_stream": {"namespace": "acme-prod"}})
+        self.assertEqual(out["data_stream"]["namespace"], "<ORG_1>")
+
+    def test_kibana_original_data_stream_namespace(self):
+        out = self.e.sanitize(
+            {"kibana": {"alert": {"original_data_stream": {"namespace": "acme-prod"}}}}
+        )
+        self.assertEqual(
+            out["kibana"]["alert"]["original_data_stream"]["namespace"], "<ORG_1>"
+        )
+
+
+# ---------------------------------------------------------------------------
+# New regex patterns: Windows paths, SIDs, DOMAIN\username
+# ---------------------------------------------------------------------------
+
+class TestNewRegexPatterns(unittest.TestCase):
+    def setUp(self):
+        self.e = JSONitizerEngine()
+
+    def test_windows_path_username_extracted(self):
+        val = r"C:\Users\jdoe\AppData\Local\Temp\script.ps1"
+        out = self.e.sanitize({"process": {"executable": val}})
+        result = out["process"]["executable"]
+        self.assertIn("<USER_1>", result)
+        self.assertNotIn("jdoe", result)
+        # Path structure must be preserved
+        self.assertIn(r"C:\Users", result)
+
+    def test_windows_path_username_with_spaces(self):
+        val = r"C:\Users\John Doe\Desktop\tool.exe"
+        out = self.e.sanitize({"process": {"executable": val}})
+        self.assertIn("<USER_1>", out["process"]["executable"])
+        self.assertNotIn("John Doe", out["process"]["executable"])
+
+    def test_windows_path_consistency_with_key_match(self):
+        # Same raw username appearing in both a structured key and a path
+        data = {
+            "user": {"name": "jdoe"},
+            "process": {"command_line": r"C:\Users\jdoe\run.bat"},
+        }
+        out = self.e.sanitize(data)
+        self.assertEqual(out["user"]["name"], "<USER_1>")
+        self.assertIn("<USER_1>", out["process"]["command_line"])
+
+    def test_windows_sid_replaced(self):
+        out = self.e.sanitize(
+            {"message": "SID: S-1-5-21-1234567890-9876543210-1122334455-1001 accessed"}
+        )
+        self.assertIn("<USER_1>", out["message"])
+        self.assertNotIn("S-1-5-21", out["message"])
+
+    def test_domain_user_replaced(self):
+        out = self.e.sanitize(
+            {"process": {"command_line": r"cmd.exe /c echo CORP\jdoe"}}
+        )
+        self.assertIn("<USER_1>", out["process"]["command_line"])
+        self.assertNotIn(r"CORP\jdoe", out["process"]["command_line"])
+
+    def test_nt_authority_system_not_replaced(self):
+        out = self.e.sanitize(
+            {"message": r"Service running as NT AUTHORITY\SYSTEM"}
+        )
+        # AUTHORITY is in _SYSTEM_PREFIXES — must not be redacted
+        self.assertNotIn("<USER_", out["message"])
+        self.assertIn("SYSTEM", out["message"])
+
+    def test_hklm_registry_path_not_replaced(self):
+        # HKLM is in _SYSTEM_PREFIXES; path continuation triggers (?!\\) anyway
+        out = self.e.sanitize(
+            {"message": r"Read HKLM\SOFTWARE\Microsoft\Windows"}
+        )
+        self.assertNotIn("<USER_", out["message"])
+        self.assertIn("HKLM", out["message"])
+
+    def test_builtin_not_replaced(self):
+        out = self.e.sanitize({"message": r"Group BUILTIN\Administrators"})
+        self.assertNotIn("<USER_", out["message"])
+
+
 if __name__ == "__main__":
     unittest.main()
